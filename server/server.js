@@ -16,6 +16,18 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../client/build')));
 
+// 导入路由模块
+const userRoutes = require('./routes/user.routes');
+const deviceRoutes = require('./routes/device.routes');
+const recognitionRoutes = require('./routes/recognition.routes');
+const caloricRoutes = require('./routes/caloric.routes');
+
+// 注册API路由
+app.use('/api/users', userRoutes);
+app.use('/api/devices', deviceRoutes);
+app.use('/api/recognition', recognitionRoutes);
+app.use('/api/caloric', caloricRoutes);
+
 // 基本路由
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: '服务器正常运行' });
@@ -39,9 +51,69 @@ app.post('/api/message', (req, res) => {
   });
 });
 
+// 在现有路由定义后添加
+
+// 测试API端点
+app.get('/api/test', (req, res) => {
+  res.json({
+    status: 'success',
+    message: '测试API正常工作',
+    time: new Date().toISOString()
+  });
+});
+
+// 简单的测试用户注册端点
+app.post('/api/test-register', (req, res) => {
+  const testUser = {
+    username: `test_${Date.now()}`,
+    password: "password123",
+    email: `test${Date.now()}@example.com`
+  };
+  
+  console.log('创建测试用户:', testUser);
+  
+  // 内部调用Python脚本注册用户
+  const { spawn } = require('child_process');
+  const pythonProcess = spawn('python', [
+    path.join(__dirname, '../database/user_operations.py'),
+    'register_user',
+    testUser.username,
+    testUser.password,
+    testUser.email
+  ], {
+    env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+  });
+  
+  let output = '';
+  pythonProcess.stdout.on('data', (data) => {
+    output += data.toString('utf-8');
+  });
+  
+  pythonProcess.stderr.on('data', (data) => {
+    console.log('Python输出:', data.toString('utf-8'));
+  });
+  
+  pythonProcess.on('close', (code) => {
+    try {
+      const result = JSON.parse(output);
+      res.json({
+        testUser,
+        result,
+        pythonExitCode: code
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: '测试用户创建失败',
+        pythonOutput: output,
+        pythonExitCode: code
+      });
+    }
+  });
+});
+
 // 捕获所有其他请求并返回前端应用
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/web/index.html'));
+  res.sendFile(path.join(__dirname, '../client/web/cal.html'));
 });
 
 // 错误处理中间件
@@ -135,6 +207,77 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 添加特定于食物识别的数据处理
+  socket.on('food_data', async (data) => {
+    try {
+      const { weight_g, image_data, deviceId } = data;
+      console.log(`收到来自设备 ${deviceId} 的食物数据，重量: ${weight_g}g`);
+      
+      // 保存图像数据到临时文件
+      const imagePath = await saveImageToFile(image_data, deviceId);
+      
+      // 调用Python进行食物识别
+      const { spawn } = require('child_process');
+      const pythonProcess = spawn('python', [
+        path.join(__dirname, '../recognition/process_food.py'),
+        '--image', imagePath,
+        '--weight', weight_g
+      ]);
+      
+      // 修改为:
+      let stdoutData = '';
+      pythonProcess.stdout.on('data', (data) => {
+        stdoutData += data.toString();
+      });
+      
+      pythonProcess.stderr.on('data', (data) => {
+        console.log('Python调试输出:', data.toString());
+      });
+      
+      pythonProcess.on('close', (code) => {
+        try {
+          if (code === 0 && stdoutData) {
+            const recognitionResult = JSON.parse(stdoutData);
+            console.log('食物识别结果:', recognitionResult);
+            
+            // 如果识别成功，通知相关APP
+            if (recognitionResult.success) {
+              const appSocketId = connectedApps.get(`app_for_${deviceId}`);
+              if (appSocketId) {
+                io.to(appSocketId).emit('food_recognition', {
+                  from: deviceId,
+                  result: recognitionResult,
+                  timestamp: new Date().toISOString()
+                });
+              }
+              
+              // 向当前连接的客户端也发送
+              socket.emit('food_recognition_result', recognitionResult);
+            }
+          } else {
+            console.error('Python进程错误或无数据:', code);
+            socket.emit('error', {
+              code: 'RECOGNITION_FAILED',
+              message: '食物识别失败'
+            });
+          }
+        } catch (err) {
+          console.error('处理识别结果错误:', err, '原始数据:', stdoutData);
+          socket.emit('error', {
+            code: 'PROCESSING_ERROR',
+            message: '处理识别结果时出错'
+          });
+        }
+      });
+    } catch (err) {
+      console.error('处理食物数据错误:', err);
+      socket.emit('error', {
+        code: 'PROCESSING_ERROR',
+        message: '处理食物数据时出错'
+      });
+    }
+  });
+
   // 断开连接处理
   socket.on('disconnect', () => {
     console.log(`客户端断开连接: ${socket.id}`);
@@ -154,6 +297,31 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+// 保存图像数据到文件的辅助函数
+async function saveImageToFile(imageData, deviceId) {
+  const fs = require('fs').promises;
+  const path = require('path');
+  
+  // 确保目录存在
+  const uploadDir = path.join(__dirname, '../uploads');
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+  } catch (err) {
+    // 目录已存在，忽略错误
+  }
+  
+  // 生成唯一文件名
+  const fileName = `${deviceId}_${Date.now()}.jpg`;
+  const filePath = path.join(uploadDir, fileName);
+  
+  // 保存图片数据
+  // 如果imageData是base64编码的字符串
+  const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+  await fs.writeFile(filePath, base64Data, { encoding: 'base64' });
+  
+  return filePath;
+}
 
 server.listen(PORT, () => {
   console.log(`服务器在http://localhost:${PORT} 上运行`);

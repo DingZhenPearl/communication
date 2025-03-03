@@ -2,6 +2,7 @@ import mysql.connector
 from mysql.connector import Error
 from datetime import datetime
 import logging
+import sys
 
 class DatabaseManager:
     def __init__(self):
@@ -24,12 +25,44 @@ class DatabaseManager:
 
     def connect(self):
         try:
+            # 明确设置字符集和排序规则
+            self.config['charset'] = 'utf8mb4'
+            self.config['collation'] = 'utf8mb4_unicode_ci'
+            self.config['use_unicode'] = True
+            
+            print(f"尝试连接到数据库: {self.config['host']}/{self.config['database']}", file=sys.stderr)
             self.connection = mysql.connector.connect(**self.config)
             if self.connection.is_connected():
-                self.logger.info("Successfully connected to MySQL database")
+                # 确保连接也使用正确的字符集
+                cursor = self.connection.cursor()
+                cursor.execute('SET NAMES utf8mb4')
+                cursor.execute('SET CHARACTER SET utf8mb4')
+                cursor.execute('SET character_set_connection=utf8mb4')
+                cursor.close()
+                
+                db_info = self.connection.get_server_info()
+                print(f"已连接到MySQL服务器版本 {db_info}", file=sys.stderr)
+                self.logger.info(f"Successfully connected to MySQL database version {db_info}")
                 return True
         except Error as e:
-            self.logger.error(f"Error connecting to MySQL: {e}")
+            error_msg = f"Error connecting to MySQL: {e}"
+            print(error_msg, file=sys.stderr)
+            self.logger.error(error_msg)
+            # 如果是"数据库不存在"错误，则创建数据库
+            if e.errno == 1049:  # 未知数据库
+                try:
+                    print("尝试创建数据库...", file=sys.stderr)
+                    conn = mysql.connector.connect(
+                        host=self.config['host'],
+                        user=self.config['user'],
+                        password=self.config['password']
+                    )
+                    cursor = conn.cursor()
+                    cursor.execute(f"CREATE DATABASE IF NOT EXISTS {self.config['database']} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+                    conn.close()
+                    print(f"数据库 {self.config['database']} 已创建，请再次尝试连接", file=sys.stderr)
+                except Error as create_err:
+                    print(f"创建数据库失败: {create_err}", file=sys.stderr)
             return False
 
     def disconnect(self):

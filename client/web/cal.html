@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>卡路里监测系统测试平台</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 15px;
+      background-color: #f9f9f9;
+    }
+    .input-group {
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 5px;
+      margin-bottom: 5px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button.secondary {
+      background-color: #2196F3;
+    }
+    button.secondary:hover {
+      background-color: #0b7dda;
+    }
+    button.danger {
+      background-color: #f44336;
+    }
+    button.danger:hover {
+      background-color: #d32f2f;
+    }
+    .image-preview {
+      max-width: 300px;
+      margin-top: 10px;
+      border: 1px solid #ddd;
+    }
+    .status {
+      margin-top: 10px;
+    }
+    .logs {
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      background-color: #f5f5f5;
+    }
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    .log-entry.success {
+      color: #4CAF50;
+    }
+    .log-entry.error {
+      color: #F44336;
+    }
+    .log-entry.info {
+      color: #2196F3;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #f1f1f1;
+      border: 1px solid #ccc;
+      border-bottom: none;
+      border-radius: 5px 5px 0 0;
+      margin-right: 5px;
+    }
+    .tab.active {
+      background-color: #fff;
+      border-bottom: 1px solid #fff;
+      margin-bottom: -1px;
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .flex-row {
+      display: flex;
+      gap: 10px;
+    }
+    textarea {
+      height: 100px;
+      font-family: monospace;
+    }
+    .result-container {
+      margin-top: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      background-color: #f5f5f5;
+      min-height: 50px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>卡路里监测系统测试平台</h1>
+    
+    <div class="tabs">
+      <div class="tab active" data-tab="device-tab">设备模拟</div>
+      <div class="tab" data-tab="user-tab">用户API</div>
+      <div class="tab" data-tab="food-tab">食物API</div>
+      <div class="tab" data-tab="caloric-tab">卡路里API</div>
+    </div>
+    
+    <!-- 设备模拟标签页 -->
+    <div id="device-tab" class="tab-content active">
+      <div class="card">
+        <h2>设备状态</h2>
+        <div class="status">
+          设备ID: <span id="device-id">device_calorie_monitor</span>
+          <span id="connection-status">未连接</span>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>食物数据采集</h2>
+        <div class="input-group">
+          <label for="weight">重量 (g):</label>
+          <input type="number" id="weight" min="1" value="100">
+        </div>
+        
+        <div class="input-group">
+          <label for="image-upload">食物图片:</label>
+          <input type="file" id="image-upload" accept="image/*">
+          <img id="image-preview" class="image-preview" style="display: none;">
+        </div>
+        
+        <button id="send-data-btn">发送数据</button>
+      </div>
+    </div>
+    
+    <!-- 用户API标签页 -->
+    <div id="user-tab" class="tab-content">
+      <div class="card">
+        <h2>用户API测试</h2>
+        
+        <div class="input-group">
+          <label>用户注册</label>
+          <div class="flex-row">
+            <input type="text" id="register-username" placeholder="用户名">
+            <input type="password" id="register-password" placeholder="密码">
+            <input type="email" id="register-email" placeholder="邮箱">
+          </div>
+          <div class="flex-row" style="margin-top: 10px;">
+            <select id="register-gender">
+              <option value="male">男</option>
+              <option value="female">女</option>
+              <option value="other">其他</option>
+            </select>
+            <input type="number" id="register-height" placeholder="身高(cm)">
+            <input type="number" id="register-weight" placeholder="体重(kg)">
+            <input type="number" id="register-calorie-goal" placeholder="每日卡路里目标">
+          </div>
+          <div class="flex-row" style="margin-top: 10px;">
+            <input type="date" id="register-birth-date" placeholder="出生日期">
+            <input type="number" id="register-target-weight" placeholder="目标体重(kg)">
+          </div>
+          <button id="register-btn" class="secondary">注册用户</button>
+        </div>
+        
+        <div class="input-group">
+          <label>用户登录</label>
+          <div class="flex-row">
+            <input type="text" id="login-username" placeholder="用户名">
+            <input type="password" id="login-password" placeholder="密码">
+          </div>
+          <button id="login-btn" class="secondary">登录</button>
+        </div>
+        
+        <div class="input-group">
+          <label>获取用户饮食记录</label>
+          <div class="flex-row">
+            <input type="text" id="diet-records-userid" placeholder="用户ID">
+            <input type="date" id="diet-records-date" placeholder="日期">
+          </div>
+          <button id="get-diet-records-btn" class="secondary">获取记录</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 食物API标签页 -->
+    <div id="food-tab" class="tab-content">
+      <div class="card">
+        <h2>食物识别API测试</h2>
+        
+        <div class="input-group">
+          <label>直接API食物识别</label>
+          <div class="flex-row">
+            <input type="number" id="api-weight" placeholder="重量(g)" value="100">
+            <input type="file" id="api-food-image" accept="image/*">
+          </div>
+          <button id="api-recognize-btn" class="secondary">识别食物</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h2>设备注册</h2>
+        
+        <div class="input-group">
+          <label>注册新设备</label>
+          <div class="flex-row">
+            <input type="text" id="device-userid" placeholder="用户ID">
+            <input type="text" id="device-name" placeholder="设备名称" value="测试设备">
+            <input type="text" id="device-type" placeholder="设备类型" value="plate">
+            <input type="text" id="device-serial" placeholder="序列号" value="SN12345678">
+          </div>
+          <button id="register-device-btn" class="secondary">注册设备</button>
+        </div>
+        
+        <div class="input-group">
+          <label>获取用户设备列表</label>
+          <div class="flex-row">
+            <input type="text" id="get-devices-userid" placeholder="用户ID">
+          </div>
+          <button id="get-devices-btn" class="secondary">获取设备列表</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 卡路里API标签页 -->
+    <div id="caloric-tab" class="tab-content">
+      <div class="card">
+        <h2>卡路里API测试</h2>
+        
+        <div class="input-group">
+          <label>获取用户当日卡路里摄入</label>
+          <div class="flex-row">
+            <input type="text" id="daily-calories-userid" placeholder="用户ID">
+            <input type="date" id="daily-calories-date" placeholder="日期">
+          </div>
+          <button id="get-daily-calories-btn" class="secondary">获取卡路里数据</button>
+        </div>
+        
+        <div class="input-group">
+          <label>获取运动建议</label>
+          <div class="flex-row">
+            <input type="text" id="recommendations-userid" placeholder="用户ID">
+            <input type="date" id="recommendations-date" placeholder="日期">
+          </div>
+          <button id="get-recommendations-btn" class="secondary">获取运动建议</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 自定义请求区域 -->
+    <div class="card">
+      <h2>自定义API请求</h2>
+      
+      <div class="flex-row">
+        <select id="custom-method">
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+        <input type="text" id="custom-url" placeholder="API路径 (例如: /api/users)" value="/api/health">
+      </div>
+      
+      <div class="input-group">
+        <label for="custom-body">请求体 (JSON):</label>
+        <textarea id="custom-body" placeholder='{"key": "value"}'></textarea>
+      </div>
+      
+      <button id="send-custom-btn">发送请求</button>
+      
+      <div class="result-container" id="custom-result">
+        <!-- 结果将显示在这里 -->
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>系统日志</h2>
+      <div id="logs" class="logs"></div>
+    </div>
+  </div>
+  
+  <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+  <script>
+    // 配置
+    const DEVICE_ID = 'device_calorie_monitor';
+    const SERVER_URL = 'http://localhost:3000';
+    
+    // DOM元素
+    const connectionStatus = document.getElementById('connection-status');
+    const weightInput = document.getElementById('weight');
+    const imageUpload = document.getElementById('image-upload');
+    const imagePreview = document.getElementById('image-preview');
+    const sendDataBtn = document.getElementById('send-data-btn');
+    const logsContainer = document.getElementById('logs');
+    const customResultContainer = document.getElementById('custom-result');
+    
+    // 图片预览
+    imageUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          imagePreview.src = event.target.result;
+          imagePreview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    
+    // 创建Socket连接
+    const socket = io(SERVER_URL);
+    
+    // 连接事件处理
+    socket.on('connect', () => {
+      addLog('已连接到服务器', 'success');
+      connectionStatus.textContent = '已连接';
+      connectionStatus.style.color = '#4CAF50';
+      
+      // 注册为硬件设备
+      socket.emit('register', {
+        type: 'hardware',
+        deviceId: DEVICE_ID
+      });
+      
+      addLog(`硬件设备 ${DEVICE_ID} 已注册`, 'success');
+    });
+    
+    // 断线处理
+    socket.on('disconnect', () => {
+      addLog('与服务器断开连接', 'error');
+      connectionStatus.textContent = '已断开';
+      connectionStatus.style.color = '#F44336';
+    });
+    
+    // 错误处理
+    socket.on('error', (error) => {
+      addLog(`错误: ${error.message}`, 'error');
+    });
+    
+    // 接收识别结果
+    socket.on('food_recognition_result', (data) => {
+      addLog('收到食物识别结果:', 'success');
+      addLog(JSON.stringify(data, null, 2));
+    });
+    
+    socket.on('food_recognition', (data) => {
+      addLog('收到食物识别结果:', 'success');
+      addLog(JSON.stringify(data, null, 2));
+    });
+    
+    // 发送食物数据
+    sendDataBtn.addEventListener('click', () => {
+      const weight = parseFloat(weightInput.value);
+      if (!weight || weight <= 0) {
+        addLog('请输入有效的重量', 'error');
+        return;
+      }
+      
+      if (!imageUpload.files[0]) {
+        addLog('请选择食物图片', 'error');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const imageData = event.target.result;
+        
+        // 发送数据到服务器
+        socket.emit('food_data', {
+          deviceId: DEVICE_ID,
+          weight_g: weight,
+          image_data: imageData,
+          timestamp: new Date().toISOString()
+        });
+        
+        addLog(`发送数据: 重量 ${weight}g, 图片已上传`, 'success');
+      };
+      
+      reader.readAsDataURL(imageUpload.files[0]);
+    });
+    
+    // 添加日志条目
+    function addLog(message, type = '') {
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry ${type}`;
+      
+      const timestamp = new Date().toLocaleTimeString();
+      logEntry.textContent = `[${timestamp}] ${message}`;
+      
+      logsContainer.prepend(logEntry);
+    }
+    
+    // 标签页切换功能
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // 移除所有活动标签和内容
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // 激活点击的标签和相应的内容
+        tab.classList.add('active');
+        const tabId = tab.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+    
+    // 用户API相关功能
+    document.getElementById('register-btn').addEventListener('click', async () => {
+      const userData = {
+        username: document.getElementById('register-username').value.trim(),
+        password: document.getElementById('register-password').value.trim(),
+        email: document.getElementById('register-email').value.trim(),
+        gender: document.getElementById('register-gender').value,
+        birth_date: document.getElementById('register-birth-date').value || "",
+        height: document.getElementById('register-height').value || "",
+        weight: document.getElementById('register-weight').value || "",
+        target_weight: document.getElementById('register-target-weight').value || "",
+        daily_calorie_goal: document.getElementById('register-calorie-goal').value || ""
+      };
+      
+      // 添加基本验证
+      if (!userData.username) {
+        addLog('用户名不能为空', 'error');
+        return;
+      }
+      
+      if (!userData.password) {
+        addLog('密码不能为空', 'error');
+        return;
+      }
+      
+      if (!userData.email || !userData.email.includes('@')) {
+        addLog('请输入有效的电子邮箱', 'error');
+        return;
+      }
+      
+      // 调试输出
+      console.log('准备发送用户数据:', userData);
+      addLog(`准备发送用户数据: ${JSON.stringify(userData)}`, 'info');
+      
+      try {
+        const response = await fetch(`${SERVER_URL}/api/users/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(userData)
+        });
+        
+        console.log('注册响应状态:', response.status);
+        const result = await response.json();
+        console.log('注册结果:', result);
+        
+        addLog(`服务器响应状态: ${response.status}`, response.ok ? 'success' : 'error');
+        addLog(`注册结果: ${JSON.stringify(result)}`, response.ok ? 'success' : 'error');
+        displayResult(result);
+      } catch (error) {
+        console.error('注册请求错误:', error);
+        addLog(`注册请求错误: ${error.message}`, 'error');
+        customResultContainer.textContent = `请求错误: ${error.message}`;
+      }
+    });
+    
+    document.getElementById('login-btn').addEventListener('click', async () => {
+      const loginData = {
+        username: document.getElementById('login-username').value,
+        password: document.getElementById('login-password').value
+      };
+      
+      try {
+        const response = await fetch(`${SERVER_URL}/api/users/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(loginData)
+        });
+        
+        const result = await response.json();
+        addLog(`用户登录结果: ${JSON.stringify(result)}`, response.ok ? 'success' : 'error');
+        displayResult(result);
+      } catch (error) {
+        addLog(`登录请求错误: ${error.message}`, 'error');
+      }
+    });
+    
+    document.getElementById('get-diet-records-btn').addEventListener('click', async () => {
+      const userId = document.getElementById('diet-records-userid').value;
+      const date = document.getElementById('diet-records-date').value;
+      
+      if (!userId) {
+        addLog('请输入用户ID', 'error');
+        return;
+      }
+      
+      try {
+        let url = `${SERVER_URL}/api/users/${userId}/diet-records`;
+        if (date) {
+          url += `?date=${date}`;
+        }
+        
+        const response = await fetch(url);
+        const result = await response.json();
+        addLog(`饮食记录结果: ${JSON.stringify(result)}`, response.ok ? 'success' : 'error');
+        displayResult(result);
+      } catch (error) {
+        addLog(`获取饮食记录错误: ${error.message}`, 'error');
+      }
+    });
+    
+    // 食物识别API功能
+    document.getElementById('api-recognize-btn').addEventListener('click', async () => {
+      const weight = document.getElementById('api-weight').value;
+      const imageFile = document.getElementById('api-food-image').files[0];
+      
+      if (!weight || !imageFile) {
+        addLog('请提供重量和图片', 'error');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      formData.append('weight', weight);
+      
+      try {
+        const response = await fetch(`${SERVER_URL}/api/recognition/process`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        addLog(`API食物识别结果: ${JSON.stringify(result)}`, response.ok ? 'success' : 'error');
+        displayResult(result);
+      } catch (error) {
+        addLog(`API识别请求错误: ${error.message}`, 'error');
+      }
+    });
+    
+    // 设备API功能
+    document.getElementById('register-device-btn').addEventListener('click', async () => {
+      const deviceData = {
+        userId: document.getElementById('device-userid').value,
+        deviceName: document.getElementById('device-name').value,
+        deviceType: document.getElementById('device-type').value,
+        serialNumber: document.getElementById('device-serial').value
+      };
+      
+      try {
+        const response = await fetch(`${SERVER_URL}/api/devices/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(deviceData)
+        });
+        
+        const result = await response.json();
+        addLog(`设备注册结果: ${JSON.stringify(result)}`, response.ok ? 'success' : 'error');
+        displayResult(result);
+      } catch (error) {
+        addLog(`设备注册请求错误: ${error.message}`, 'error');
+      }
+    });
+    
+    document.getElementById('get-devices-btn').addEventListener('click', async () => {
+      const userId = document.getElementById('get-devices-userid').value;
+      
+      if (!userId) {
+        addLog('请输入用户ID', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${SERVER_URL}/api/devices/user/${userId}`);
+        const result = await response.json();
+        addLog(`获取设备列表结果: ${JSON.stringify(result)}`, response.ok ? 'success' : 'error');
+        displayResult(result);
+      } catch (error) {
+        addLog(`获取设备列表错误: ${error.message}`, 'error');
+      }
+    });
+    
+    // 卡路里API功能
+    document.getElementById('get-daily-calories-btn').addEventListener('click', async () => {
+      const userId = document.getElementById('daily-calories-userid').value;
+      const date = document.getElementById('daily-calories-date').value;
+      
+      if (!userId) {
+        addLog('请输入用户ID', 'error');
+        return;
+      }
+      
+      try {
+        let url = `${SERVER_URL}/api/caloric/daily/${userId}`;
+        if (date) {
+          url += `?date=${date}`;
+        }
+        
+        const response = await fetch(url);
+        const result = await response.json();
+        addLog(`获取卡路里数据结果: ${JSON.stringify(result)}`, response.ok ? 'success' : 'error');
+        displayResult(result);
+      } catch (error) {
+        addLog(`获取卡路里数据错误: ${error.message}`, 'error');
+      }
+    });
+    
+    document.getElementById('get-recommendations-btn').addEventListener('click', async () => {
+      const userId = document.getElementById('recommendations-userid').value;
+      const date = document.getElementById('recommendations-date').value;
+      
+      if (!userId) {
+        addLog('请输入用户ID', 'error');
+        return;
+      }
+      
+      try {
+        let url = `${SERVER_URL}/api/caloric/exercise-recommendations/${userId}`;
+        if (date) {
+          url += `?date=${date}`;
+        }
+        
+        const response = await fetch(url);
+        const result = await response.json();
+        addLog(`获取运动建议结果: ${JSON.stringify(result)}`, response.ok ? 'success' : 'error');
+        displayResult(result);
+      } catch (error) {
+        addLog(`获取运动建议错误: ${error.message}`, 'error');
+      }
+    });
+    
+    // 自定义API请求
+    document.getElementById('send-custom-btn').addEventListener('click', async () => {
+      const method = document.getElementById('custom-method').value;
+      const url = document.getElementById('custom-url').value;
+      const bodyText = document.getElementById('custom-body').value;
+      
+      try {
+        const options = {
+          method: method,
+          headers: {}
+        };
+        
+        if (method !== 'GET' && bodyText) {
+          try {
+            const bodyJson = JSON.parse(bodyText);
+            options.body = JSON.stringify(bodyJson);
+            options.headers['Content-Type'] = 'application/json';
+          } catch (e) {
+            addLog('请求体不是有效JSON格式', 'error');
+            return;
+          }
+        }
+        
+        let fullUrl = url.startsWith('http') ? url : `${SERVER_URL}${url}`;
+        addLog(`发送${method}请求到: ${fullUrl}`, 'info');
+        
+        const response = await fetch(fullUrl, options);
+        const result = await response.json();
+        
+        addLog(`请求结果 (状态码: ${response.status}):`, response.ok ? 'success' : 'error');
+        displayResult(result);
+      } catch (error) {
+        addLog(`请求错误: ${error.message}`, 'error');
+        customResultContainer.textContent = `错误: ${error.message}`;
+      }
+    });
+    
+    function displayResult(result) {
+      customResultContainer.textContent = JSON.stringify(result, null, 2);
+    }
+  </script>
+</body>
+</html>

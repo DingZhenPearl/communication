@@ -4,8 +4,8 @@
   "description": "通信服务应用",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -13,6 +13,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
