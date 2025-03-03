@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>硬件设备模拟器</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .header {
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .online {
+      background-color: #4CAF50;
+    }
+    .offline {
+      background-color: #F44336;
+    }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .message {
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      border-radius: 5px;
+      max-width: 80%;
+    }
+    .incoming {
+      background-color: #E3F2FD;
+      align-self: flex-start;
+      margin-right: auto;
+    }
+    .outgoing {
+      background-color: #E8F5E9;
+      align-self: flex-end;
+      margin-left: auto;
+      text-align: right;
+    }
+    .message-container {
+      display: flex;
+      flex-direction: column;
+    }
+    .message-meta {
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 2px;
+    }
+    .input-area {
+      display: flex;
+      margin-top: 10px;
+    }
+    #message-input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-right: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0b7dda;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>硬件设备模拟器</h1>
+      <div class="status">
+        <div id="status-indicator" class="status-indicator offline"></div>
+        <span id="status-text">未连接</span>
+      </div>
+    </div>
+    
+    <div id="messages" class="messages"></div>
+    
+    <div class="input-area">
+      <input type="text" id="message-input" placeholder="输入消息..." />
+      <button id="send-btn" disabled>发送</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+  <script>
+    // 配置
+    const HARDWARE_ID = 'device_test';
+    const SERVER_URL = 'http://localhost:3000';
+    
+    // 获取DOM元素
+    const messagesEl = document.getElementById('messages');
+    const statusIndicator = document.getElementById('status-indicator');
+    const statusText = document.getElementById('status-text');
+    const messageInput = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    
+    // 创建Socket连接
+    const socket = io(SERVER_URL);
+    
+    // 连接事件处理
+    socket.on('connect', () => {
+      console.log('已连接到服务器');
+      updateStatus(true, '已连接');
+      
+      // 注册为硬件设备
+      socket.emit('register', {
+        type: 'hardware',
+        deviceId: HARDWARE_ID
+      });
+      
+      console.log(`硬件设备 ${HARDWARE_ID} 已注册`);
+    });
+    
+    // 接收消息
+    socket.on('message', (data) => {
+      console.log('收到消息:', data);
+      addMessage(data.message, data.from, new Date(data.timestamp), true);
+    });
+    
+    // 错误处理
+    socket.on('error', (error) => {
+      console.error('通信错误:', error);
+      alert(`通信错误: ${error.message}`);
+    });
+    
+    // 断线处理
+    socket.on('disconnect', () => {
+      console.log('与服务器断开连接');
+      updateStatus(false, '已断开');
+    });
+    
+    // 发送消息
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+    
+    function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message) return;
+      
+      // 发送消息到配对的APP
+      socket.emit('message', {
+        to: `app_for_${HARDWARE_ID}`,
+        message,
+        metadata: {
+          deviceStatus: 'normal',
+          batteryLevel: Math.floor(Math.random() * 100)
+        }
+      });
+      
+      // 添加到界面
+      addMessage(message, HARDWARE_ID, new Date(), false);
+      
+      // 清空输入框
+      messageInput.value = '';
+    }
+    
+    function addMessage(text, sender, time, isIncoming) {
+      const messageEl = document.createElement('div');
+      messageEl.className = `message-container`;
+      
+      const messageContent = document.createElement('div');
+      messageContent.className = `message ${isIncoming ? 'incoming' : 'outgoing'}`;
+      messageContent.textContent = text;
+      
+      const metaEl = document.createElement('div');
+      metaEl.className = 'message-meta';
+      metaEl.textContent = `${sender} | ${time.toLocaleTimeString()}`;
+      
+      messageEl.appendChild(messageContent);
+      messageEl.appendChild(metaEl);
+      messagesEl.prepend(messageEl);
+    }
+    
+    function updateStatus(isConnected, text) {
+      if (isConnected) {
+        statusIndicator.className = 'status-indicator online';
+        sendBtn.disabled = false;
+      } else {
+        statusIndicator.className = 'status-indicator offline';
+        sendBtn.disabled = true;
+      }
+      statusText.textContent = text;
+    }
+  </script>
+</body>
+</html>
